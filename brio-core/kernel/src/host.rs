@@ -10,7 +10,7 @@ use crate::mesh::{MeshMessage, Payload};
 pub struct BrioHostState {
     mesh_router: HashMap<String, Sender<MeshMessage>>,
     db_pool: SqlitePool,
-    ui_broadcaster: broadcast::Sender<String>,
+    _ui_broadcaster: broadcast::Sender<String>,
 }
 
 impl BrioHostState {
@@ -22,7 +22,7 @@ impl BrioHostState {
         Ok(Self {
             mesh_router: HashMap::new(),
             db_pool: pool,
-            ui_broadcaster: tx,
+            _ui_broadcaster: tx,
         })
     }
 

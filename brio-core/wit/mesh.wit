@@ -1,3 +1,5 @@
+package brio:core;
+
 interface service-mesh {
     variant payload {
         json(string),

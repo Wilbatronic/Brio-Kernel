@@ -1,3 +1,5 @@
+package brio:core;
+
 interface sql-state {
     record row {
         columns: list<string>,

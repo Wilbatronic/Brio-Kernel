@@ -1,0 +1,36 @@
+package brio:ai;
+
+interface inference {
+    // linguistic-modular-units: clear distinct roles
+    variant role {
+        system,
+        user,
+        assistant
+    }
+
+    record message {
+        role: role,
+        content: string
+    }
+
+    record usage {
+        prompt-tokens: u32,
+        completion-tokens: u32,
+        total-tokens: u32
+    }
+
+    record completion-response {
+        content: string,
+        usage: option<usage>
+    }
+
+    // single-choice: specific error types, no generic codes
+    variant inference-error {
+        provider-error(string),
+        rate-limit,
+        context-length-exceeded
+    }
+
+    // Main entrypoint
+    chat: func(model: string, messages: list<message>) -> result<completion-response, inference-error>;
+}

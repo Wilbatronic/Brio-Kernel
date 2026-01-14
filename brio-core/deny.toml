@@ -11,7 +11,7 @@ wildcards = "allow"
 allow = [
     "MIT",
     "Apache-2.0",
-    "Unicode-DFS-2016",
+    "Apache-2.0 WITH LLVM-exception",
     "Unicode-3.0",
     "MPL-2.0",
     "BSD-3-Clause",

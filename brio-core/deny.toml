@@ -1,6 +1,6 @@
 [advisories]
 ignore = []
-severity-threshold = "error"
+
 
 [bans]
 multiple-versions = "warn"

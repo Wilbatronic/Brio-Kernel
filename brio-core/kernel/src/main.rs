@@ -28,22 +28,22 @@ async fn main() -> anyhow::Result<()> {
         component: "Kernel".into(),
     });
 
-    let server_config = config.clone();
-    tokio::spawn(async move {
-        if let Err(e) = server::run_server(&server_config).await {
-            error!("Control Plane failed: {:?}", e);
-        }
-    });
-
     let db_url = config.database.url.expose_secret();
-    let _state = match BrioHostState::new(db_url).await {
+    let state = match BrioHostState::new(db_url).await {
         Ok(s) => s,
         Err(e) => {
             error!("Failed to initialize host state: {:?}", e);
-            // We exit here because the kernel cannot function without state
             std::process::exit(1);
         }
     };
+
+    let broadcaster = state.broadcaster().clone();
+    let server_config = config.clone();
+    tokio::spawn(async move {
+        if let Err(e) = server::run_server(&server_config, broadcaster).await {
+            error!("Control Plane failed: {:?}", e);
+        }
+    });
 
     info!("Brio Kernel Initialized. Waiting for shutdown signal...");
 

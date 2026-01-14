@@ -1,29 +1,27 @@
 use anyhow::{Result, anyhow};
 use sqlx::{SqlitePool, sqlite::SqlitePoolOptions};
 use std::collections::HashMap;
-use tokio::sync::broadcast;
 use tokio::sync::mpsc::Sender;
 use tokio::sync::oneshot;
 
 use crate::mesh::{MeshMessage, Payload};
 use crate::store::{PrefixPolicy, SqlStore};
+use crate::ws::{BroadcastMessage, Broadcaster, WsPatch};
 
 pub struct BrioHostState {
     mesh_router: HashMap<String, Sender<MeshMessage>>,
     db_pool: SqlitePool,
-    _ui_broadcaster: broadcast::Sender<String>,
+    broadcaster: Broadcaster,
 }
 
 impl BrioHostState {
     pub async fn new(db_url: &str) -> Result<Self> {
         let pool = SqlitePoolOptions::new().connect(db_url).await?;
 
-        let (tx, _) = broadcast::channel(100);
-
         Ok(Self {
             mesh_router: HashMap::new(),
             db_pool: pool,
-            _ui_broadcaster: tx,
+            broadcaster: Broadcaster::new(),
         })
     }
 
@@ -44,6 +42,18 @@ impl BrioHostState {
         // We inject the PrefixPolicy here.
         // In the future, this could be configurable per scope.
         SqlStore::new(self.db_pool.clone(), Box::new(PrefixPolicy))
+    }
+
+    /// Accessor for the broadcaster (query - CQS).
+    pub fn broadcaster(&self) -> &Broadcaster {
+        &self.broadcaster
+    }
+
+    /// Broadcasts a JSON Patch to all connected UI clients (command - CQS).
+    pub fn broadcast_patch(&self, patch: WsPatch) -> Result<()> {
+        self.broadcaster
+            .broadcast(BroadcastMessage::Patch(patch))
+            .map_err(|e| anyhow!("Broadcast failed: {}", e))
     }
 
     pub async fn mesh_call(&self, target: &str, method: &str, payload: Payload) -> Result<Payload> {

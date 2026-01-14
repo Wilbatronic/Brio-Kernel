@@ -81,6 +81,7 @@ jobs:
       - uses: EmbarkStudios/cargo-deny-action@v2
         with:
           command: check
+          manifest-path: brio-core/Cargo.toml
           arguments: --workspace
 
   coverage:

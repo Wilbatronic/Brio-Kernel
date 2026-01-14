@@ -22,6 +22,7 @@ allow = [
     "Unlicense",
     "BSL-1.0",
     "OpenSSL",
+    "CDDL-1.0",
 ]
 confidence-threshold = 0.8
 

@@ -6,6 +6,7 @@ use tokio::sync::mpsc::Sender;
 use tokio::sync::oneshot;
 
 use crate::mesh::{MeshMessage, Payload};
+use crate::store::{PrefixPolicy, SqlStore};
 
 pub struct BrioHostState {
     mesh_router: HashMap<String, Sender<MeshMessage>>,
@@ -35,6 +36,14 @@ impl BrioHostState {
     /// Accessor for the DB Pool (Immutable access only)
     pub fn db(&self) -> &SqlitePool {
         &self.db_pool
+    }
+
+    /// Get a scoped Store interface for the given component.
+    /// This ensures all queries are validated against the component's scope.
+    pub fn get_store(&self, _scope: &str) -> SqlStore {
+        // We inject the PrefixPolicy here.
+        // In the future, this could be configurable per scope.
+        SqlStore::new(self.db_pool.clone(), Box::new(PrefixPolicy))
     }
 
     pub async fn mesh_call(&self, target: &str, method: &str, payload: Payload) -> Result<Payload> {

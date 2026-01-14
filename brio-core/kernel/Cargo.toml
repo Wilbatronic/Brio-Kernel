@@ -44,3 +44,11 @@ reflink = "0.1"
 walkdir = "2"
 sha2 = "0.10"
 hex = "0.4"
+reqwest = { version = "0.13.1", default-features = false, features = [
+    "json",
+    "rustls",
+] }
+async-trait = "0.1"
+
+[dev-dependencies]
+supervisor = { path = "../components/supervisor" }

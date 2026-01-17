@@ -119,3 +119,32 @@ impl LLMProvider for OpenAIProvider {
         }
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use secrecy::SecretString;
+    use reqwest::Url;
+
+    #[test]
+    fn test_openai_config_creation() {
+        let api_key = SecretString::new("test-key".into());
+        let base_url = Url::parse("https://api.openai.com/v1/").unwrap();
+        let config = OpenAIConfig {
+            api_key,
+            base_url: base_url.clone(),
+        };
+        assert_eq!(config.base_url, base_url);
+    }
+
+    #[test]
+    fn test_openai_provider_new() {
+        let api_key = SecretString::new("test-key".into());
+        let base_url = Url::parse("https://api.openai.com/v1/").unwrap();
+        let config = OpenAIConfig {
+            api_key,
+            base_url,
+        };
+        let _provider = OpenAIProvider::new(config);
+    }
+}

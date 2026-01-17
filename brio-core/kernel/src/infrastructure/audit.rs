@@ -31,3 +31,28 @@ pub fn log_audit(event: AuditEvent) {
     // In production, we'd implementation `Serialize` for AuditEvent and log it as json.
     info!(target: "audit", event = ?event, "Security Audit Event");
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_log_audit_variants() {
+        // These calls should not panic
+        log_audit(AuditEvent::SystemStartup {
+            component: "Test".into(),
+        });
+        log_audit(AuditEvent::SystemShutdown {
+            reason: "Testing".into(),
+        });
+        log_audit(AuditEvent::AccessDenied {
+            user: "bob".into(),
+            resource: "secret".into(),
+        });
+        log_audit(AuditEvent::ConfigChanged {
+            key: "port".into(),
+            old_val: "80".into(),
+            new_val: "8080".into(),
+        });
+    }
+}

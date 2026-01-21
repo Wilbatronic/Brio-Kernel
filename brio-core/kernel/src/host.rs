@@ -7,12 +7,15 @@ use tokio::sync::oneshot;
 
 use crate::inference::{LLMProvider, ProviderRegistry};
 use crate::mesh::{MeshMessage, Payload};
+use crate::mesh::remote::RemoteRouter;
+use crate::mesh::types::{NodeId, NodeInfo};
 use crate::store::{PrefixPolicy, SqlStore};
 use crate::vfs::manager::SessionManager;
 use crate::ws::{BroadcastMessage, Broadcaster, WsPatch};
 
 pub struct BrioHostState {
     mesh_router: std::sync::RwLock<HashMap<String, Sender<MeshMessage>>>,
+    remote_router: Option<RemoteRouter>,
     db_pool: SqlitePool,
     broadcaster: Broadcaster,
     session_manager: std::sync::Mutex<SessionManager>,
@@ -26,6 +29,22 @@ impl BrioHostState {
 
         Ok(Self {
             mesh_router: std::sync::RwLock::new(HashMap::new()),
+            remote_router: None, // Default to standalone mode
+            db_pool: pool,
+            broadcaster: Broadcaster::new(),
+            session_manager: std::sync::Mutex::new(SessionManager::new()),
+            provider_registry: Arc::new(registry),
+        })
+    }
+
+    /// Creates a new BrioHostState with distributed mesh support
+    pub async fn new_distributed(db_url: &str, registry: ProviderRegistry, node_id: NodeId) -> Result<Self> {
+        let pool = SqlitePoolOptions::new().connect(db_url).await?;
+        let remote_router = RemoteRouter::new(node_id);
+
+        Ok(Self {
+            mesh_router: std::sync::RwLock::new(HashMap::new()),
+            remote_router: Some(remote_router),
             db_pool: pool,
             broadcaster: Broadcaster::new(),
             session_manager: std::sync::Mutex::new(SessionManager::new()),
@@ -44,6 +63,12 @@ impl BrioHostState {
     pub fn register_component(&self, id: String, sender: Sender<MeshMessage>) {
         let mut router = self.mesh_router.write().expect("RwLock poisoned");
         router.insert(id, sender);
+    }
+
+    pub fn register_remote_node(&self, info: NodeInfo) {
+        if let Some(router) = &self.remote_router {
+            router.register_node(info);
+        }
     }
 
     pub fn db(&self) -> &SqlitePool {
@@ -65,30 +90,58 @@ impl BrioHostState {
     }
 
     pub async fn mesh_call(&self, target: &str, method: &str, payload: Payload) -> Result<Payload> {
+        // 1. Try local routing first
         let sender = {
             let router = self.mesh_router.read().expect("RwLock poisoned");
-            router
-                .get(target)
-                .ok_or_else(|| anyhow!("Target component '{}' not found", target))?
-                .clone()
+            router.get(target).cloned()
         };
 
-        let (reply_tx, reply_rx) = oneshot::channel();
-        let message = MeshMessage {
-            target: target.to_string(),
-            method: method.to_string(),
-            payload,
-            reply_tx,
-        };
+        if let Some(sender) = sender {
+            let (reply_tx, reply_rx) = oneshot::channel();
+            let message = MeshMessage {
+                target: target.to_string(),
+                method: method.to_string(),
+                payload,
+                reply_tx,
+            };
 
-        sender
-            .send(message)
-            .await
-            .map_err(|e| anyhow!("Failed to send message to target '{}': {}", target, e))?;
-        let response = reply_rx
-            .await
-            .map_err(|e| anyhow!("Failed to receive reply from target '{}': {}", target, e))?;
-        response.map_err(|e| anyhow!("Target '{}' returned error: {}", target, e))
+            sender
+                .send(message)
+                .await
+                .map_err(|e| anyhow!("Failed to send message to target '{}': {}", target, e))?;
+            let response = reply_rx
+                .await
+                .map_err(|e| anyhow!("Failed to receive reply from target '{}': {}", target, e))?;
+            return response.map_err(|e| anyhow!("Target '{}' returned error: {}", target, e));
+        }
+
+        // 2. Try remote routing if enabled and target looks like "node_id/component" or if we have a robust routing table
+        // For now, we assume simple target names are local. If we want explicit remote addressing: "node_id:component_id"
+        // OR we just broadcast/lookup in remote registry.
+        
+        // Simplified logic: If not found locally, and we have a distributed router, try to find where it lives? 
+        // Or for now, explicit routing "remote_node_id/target".
+        
+        // Let's implement explicit remote routing: "node_id:component"
+        if let Some(router) = &self.remote_router {
+            if let Some((node_id_str, component)) = target.split_once('/') {
+                let node_id = NodeId::from(node_id_str.to_string());
+                
+                // If it's for 'us', recurse locally (handle edge case)
+                // For now assuming it is remote.
+                
+                let message = MeshMessage {
+                    target: component.to_string(),
+                    method: method.to_string(),
+                    payload,
+                    reply_tx: oneshot::channel().0, // Dummy, not used by RemoteRouter internal logic which handles req/resp
+                };
+                
+                return router.send(&node_id, message).await;
+            }
+        }
+
+        Err(anyhow!("Target component '{}' not found", target))
     }
 
     pub fn begin_session(&self, base_path: String) -> Result<String, String> {

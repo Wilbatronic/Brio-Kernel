@@ -414,11 +414,38 @@ pub enum AuditEvent {
 
 ## Future Considerations
 
-1. **Distributed Mesh**: Multi-node service mesh for horizontal scaling
+1. ~~**Distributed Mesh**: Multi-node service mesh for horizontal scaling~~ ✅ **Implemented**
 2. **Component Hot-Reload**: Update components without kernel restart
 3. **Persistent Sessions**: Resume sessions across kernel restarts
 4. **Plugin System**: Third-party tool/agent installation
 5. ~~**Multi-Model Support**: Concurrent use of different LLM providers~~ ✅ **Implemented**
+
+---
+
+## Distributed Mesh
+
+Brio now supports a multi-node service mesh using gRPC transport. Nodes can route calls transparently to local or remote components.
+
+**Architecture:**
+- **Local Routing**: `MeshRouter` (HashMap) for same-process components.
+- **Remote Routing**: `RemoteRouter` (gRPC Client) for cross-node calls.
+- **Node Registry**: Tracks `NodeId` mapped to `NodeAddress`.
+- **Transport**: gRPC via `tonic` and `prost`.
+
+**Configuration:**
+Enable distributed mode by setting environment variables:
+- `BRIO_NODE_ID`: Unique ID for the node (e.g., `node-1`)
+- `BRIO_MESH_PORT`: Port to listen on (default `50051`)
+
+**Usage:**
+```rust
+// Start in distributed mode
+let node_id = NodeId::from("node-1");
+let host = BrioHostState::new_distributed(db_url, registry, node_id).await?;
+
+// Calls to "local_component" stay local
+// Calls to "other_node/remote_component" are routed via gRPC
+```
 
 ---
 

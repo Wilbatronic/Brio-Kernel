@@ -48,6 +48,8 @@ reqwest = { version = "0.13.1", default-features = false, features = [
     "rustls",
 ] }
 async-trait = "0.1"
+prost = "0.13"
+tonic = "0.12"
 
 # pprof uses Unix-specific APIs (pthread, signals) - only enable on Unix
 [target.'cfg(unix)'.dependencies]
@@ -58,3 +60,6 @@ supervisor = { path = "../components/supervisor" }
 wiremock = "0.6"
 proptest = "1"
 
+
+[build-dependencies]
+tonic-build = "0.12"

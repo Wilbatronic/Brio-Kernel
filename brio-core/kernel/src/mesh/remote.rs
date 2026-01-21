@@ -1,6 +1,5 @@
 use std::collections::HashMap;
 use std::sync::{Arc, RwLock};
-use std::time::{SystemTime, UNIX_EPOCH};
 use anyhow::{Result, anyhow};
 use tonic::transport::Channel;
 
@@ -13,6 +12,7 @@ use crate::mesh::{MeshMessage, Payload};
 pub struct RemoteRouter {
     registry: Arc<RwLock<NodeRegistry>>,
     clients: Arc<RwLock<HashMap<NodeId, MeshTransportClient<Channel>>>>,
+    #[allow(dead_code)]
     local_node_id: NodeId,
 }
 
@@ -109,5 +109,29 @@ impl NodeRegistry {
     
     pub fn list(&self) -> Vec<NodeInfo> {
         self.nodes.values().cloned().collect()
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_registry_operations() {
+        let mut registry = NodeRegistry::new();
+        let id = NodeId::new();
+        let info = NodeInfo {
+            id: id.clone(),
+            address: NodeAddress("127.0.0.1:8080".to_string()),
+            capabilities: vec![],
+            last_seen: 0,
+        };
+
+        registry.register(info.clone());
+        assert!(registry.get(&id).is_some());
+        
+        let list = registry.list();
+        assert_eq!(list.len(), 1);
+        assert_eq!(list[0].id, id);
     }
 }

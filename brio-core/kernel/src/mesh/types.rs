@@ -11,6 +11,12 @@ impl NodeId {
     }
 }
 
+impl Default for NodeId {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl fmt::Display for NodeId {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(f, "{}", self.0)
@@ -47,4 +53,37 @@ pub struct MeshConfig {
     pub node_id: String,
     pub listen_address: String,
     pub bootstrap_nodes: Vec<String>,
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_node_id_creation() {
+        let id1 = NodeId::new();
+        let id2 = NodeId::new();
+        assert_ne!(id1, id2);
+    }
+
+    #[test]
+    fn test_node_id_display() {
+        let id = NodeId("test-node".to_string());
+        assert_eq!(id.to_string(), "test-node");
+    }
+
+    #[test]
+    fn test_serialization() {
+        let info = NodeInfo {
+            id: NodeId("node-1".to_string()),
+            address: NodeAddress("127.0.0.1:8080".to_string()),
+            capabilities: vec!["mesh".to_string()],
+            last_seen: 100,
+        };
+        
+        let json = serde_json::to_string(&info).unwrap();
+        let deserialized: NodeInfo = serde_json::from_str(&json).unwrap();
+        assert_eq!(deserialized.id, info.id);
+        assert_eq!(deserialized.address, info.address);
+    }
 }

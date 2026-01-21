@@ -39,7 +39,7 @@ async fn main() -> anyhow::Result<()> {
     
     // Create registry (common for both modes)
     let registry = brio_kernel::inference::ProviderRegistry::new();
-    registry.register_arc("default", std::sync::Arc::new(Box::new(provider)));
+    registry.register_arc("default", std::sync::Arc::new(provider));
     registry.set_default("default");
 
     // Check for distributed config

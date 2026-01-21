@@ -29,7 +29,7 @@ impl LLMProvider for MockProvider {
 
 #[tokio::test]
 async fn test_host_state_creation() -> Result<()> {
-    let host = BrioHostState::new("sqlite::memory:", Box::new(MockProvider)).await?;
+    let host = BrioHostState::with_provider("sqlite::memory:", Box::new(MockProvider)).await?;
     // Verify we can access the DB pool
     let _db = host.db();
     Ok(())
@@ -37,7 +37,7 @@ async fn test_host_state_creation() -> Result<()> {
 
 #[tokio::test]
 async fn test_host_state_broadcaster_access() -> Result<()> {
-    let host = BrioHostState::new("sqlite::memory:", Box::new(MockProvider)).await?;
+    let host = BrioHostState::with_provider("sqlite::memory:", Box::new(MockProvider)).await?;
     let broadcaster = host.broadcaster();
     // Broadcaster should start with 0 clients
     assert_eq!(broadcaster.client_count(), 0);
@@ -46,7 +46,7 @@ async fn test_host_state_broadcaster_access() -> Result<()> {
 
 #[tokio::test]
 async fn test_host_state_inference_access() -> Result<()> {
-    let host = BrioHostState::new("sqlite::memory:", Box::new(MockProvider)).await?;
+    let host = BrioHostState::with_provider("sqlite::memory:", Box::new(MockProvider)).await?;
     let inference = host.inference();
     // Should be able to clone the Arc
     let _cloned = inference.clone();
@@ -59,7 +59,7 @@ async fn test_host_state_inference_access() -> Result<()> {
 
 #[tokio::test]
 async fn test_register_and_call_component() -> Result<()> {
-    let host = Arc::new(BrioHostState::new("sqlite::memory:", Box::new(MockProvider)).await?);
+    let host = Arc::new(BrioHostState::with_provider("sqlite::memory:", Box::new(MockProvider)).await?);
 
     let (tx, mut rx) = mpsc::channel::<MeshMessage>(10);
     host.register_component("test-component".to_string(), tx);
@@ -90,7 +90,7 @@ async fn test_register_and_call_component() -> Result<()> {
 
 #[tokio::test]
 async fn test_mesh_call_to_missing_target() -> Result<()> {
-    let host = BrioHostState::new("sqlite::memory:", Box::new(MockProvider)).await?;
+    let host = BrioHostState::with_provider("sqlite::memory:", Box::new(MockProvider)).await?;
 
     let result = host
         .mesh_call("nonexistent", "method", Payload::Json("".to_string()))
@@ -104,7 +104,7 @@ async fn test_mesh_call_to_missing_target() -> Result<()> {
 
 #[tokio::test]
 async fn test_register_multiple_components() -> Result<()> {
-    let host = Arc::new(BrioHostState::new("sqlite::memory:", Box::new(MockProvider)).await?);
+    let host = Arc::new(BrioHostState::with_provider("sqlite::memory:", Box::new(MockProvider)).await?);
 
     let (tx1, mut rx1) = mpsc::channel::<MeshMessage>(10);
     let (tx2, mut rx2) = mpsc::channel::<MeshMessage>(10);
@@ -150,7 +150,7 @@ async fn test_register_multiple_components() -> Result<()> {
 
 #[tokio::test]
 async fn test_get_store() -> Result<()> {
-    let host = BrioHostState::new("sqlite::memory:", Box::new(MockProvider)).await?;
+    let host = BrioHostState::with_provider("sqlite::memory:", Box::new(MockProvider)).await?;
     let _store = host.get_store("test_scope");
     // Store should be created without error
     Ok(())
@@ -162,7 +162,7 @@ async fn test_get_store() -> Result<()> {
 
 #[tokio::test]
 async fn test_session_with_nonexistent_path() -> Result<()> {
-    let host = BrioHostState::new("sqlite::memory:", Box::new(MockProvider)).await?;
+    let host = BrioHostState::with_provider("sqlite::memory:", Box::new(MockProvider)).await?;
     let result = host.begin_session("/nonexistent/path/12345".to_string());
 
     assert!(result.is_err());
@@ -171,7 +171,7 @@ async fn test_session_with_nonexistent_path() -> Result<()> {
 
 #[tokio::test]
 async fn test_session_begin_and_commit() -> Result<()> {
-    let host = BrioHostState::new("sqlite::memory:", Box::new(MockProvider)).await?;
+    let host = BrioHostState::with_provider("sqlite::memory:", Box::new(MockProvider)).await?;
 
     // Create a temporary directory for the session
     let temp = std::env::temp_dir().join("brio_host_test_session");
@@ -202,7 +202,7 @@ async fn test_session_begin_and_commit() -> Result<()> {
 async fn test_broadcast_patch() -> Result<()> {
     use brio_kernel::ws::WsPatch;
 
-    let host = BrioHostState::new("sqlite::memory:", Box::new(MockProvider)).await?;
+    let host = BrioHostState::with_provider("sqlite::memory:", Box::new(MockProvider)).await?;
 
     // Create an empty patch
     let patch = WsPatch::new(json_patch::Patch(vec![]));
@@ -220,7 +220,7 @@ async fn test_broadcast_patch() -> Result<()> {
 
 #[tokio::test]
 async fn test_binary_payload_routing() -> Result<()> {
-    let host = Arc::new(BrioHostState::new("sqlite::memory:", Box::new(MockProvider)).await?);
+    let host = Arc::new(BrioHostState::with_provider("sqlite::memory:", Box::new(MockProvider)).await?);
 
     let (tx, mut rx) = mpsc::channel::<MeshMessage>(10);
     host.register_component("binary-handler".to_string(), tx);

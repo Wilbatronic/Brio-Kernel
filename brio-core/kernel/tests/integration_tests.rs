@@ -18,7 +18,7 @@ impl LLMProvider for MockProvider {
 #[tokio::test]
 async fn test_basic_host_interaction() -> Result<()> {
     // 1. Setup host state
-    let host_state = BrioHostState::new("sqlite::memory:", Box::new(MockProvider)).await?;
+    let host_state = BrioHostState::with_provider("sqlite::memory:", Box::new(MockProvider)).await?;
     
     // 2. Setup WASM engine
     let config = create_engine_config();

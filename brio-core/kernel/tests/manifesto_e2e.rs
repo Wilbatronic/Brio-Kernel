@@ -28,7 +28,7 @@ impl TestEnvironment {
         }
         std::fs::create_dir_all(&root)?;
 
-        let host = Arc::new(BrioHostState::new("sqlite::memory:", provider).await?);
+        let host = Arc::new(BrioHostState::with_provider("sqlite::memory:", provider).await?);
 
         let env = Self {
             host,

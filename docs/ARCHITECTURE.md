@@ -418,4 +418,30 @@ pub enum AuditEvent {
 2. **Component Hot-Reload**: Update components without kernel restart
 3. **Persistent Sessions**: Resume sessions across kernel restarts
 4. **Plugin System**: Third-party tool/agent installation
-5. **Multi-Model Support**: Concurrent use of different LLM providers
+5. ~~**Multi-Model Support**: Concurrent use of different LLM providers~~ ✅ **Implemented**
+
+---
+
+## Multi-Model Support
+
+The kernel now supports concurrent use of multiple LLM providers through the `ProviderRegistry`:
+
+```rust
+// Register multiple providers
+let registry = ProviderRegistry::new();
+registry.register("openai", OpenAIProvider::new(openai_config));
+registry.register("anthropic", AnthropicProvider::new(anthropic_config));
+registry.set_default("openai");
+
+// Access providers by name
+let openai = host.inference_by_name("openai");
+let anthropic = host.inference_by_name("anthropic");
+
+// Or use the default provider
+let default = host.inference();
+```
+
+**Supported Providers:**
+- **OpenAI** (`OpenAIProvider`) - Compatible with OpenAI API and OpenRouter
+- **Anthropic** (`AnthropicProvider`) - Claude models via Anthropic API
+

@@ -71,7 +71,7 @@ async fn test_wasm_engine_prepare_store() -> Result<()> {
     let linker = create_linker(&engine)?;
     let wasm_engine = WasmEngine::new(linker)?;
 
-    let host_state = BrioHostState::new("sqlite::memory:", Box::new(MockProvider)).await?;
+    let host_state = BrioHostState::with_provider("sqlite::memory:", Box::new(MockProvider)).await?;
     let _store = wasm_engine.prepare_store(host_state);
 
     Ok(())
@@ -114,7 +114,7 @@ async fn test_instantiate_empty_component() -> Result<()> {
     // Create minimal empty component
     let component = wasmtime::component::Component::new(&engine, r#"(component)"#)?;
 
-    let host_state = BrioHostState::new("sqlite::memory:", Box::new(MockProvider)).await?;
+    let host_state = BrioHostState::with_provider("sqlite::memory:", Box::new(MockProvider)).await?;
     let mut store = wasm_engine.prepare_store(host_state);
 
     // Should be able to instantiate
@@ -142,10 +142,10 @@ fn test_multiple_stores_from_same_engine() {
         let wasm_engine = WasmEngine::new(linker).unwrap();
 
         // Create multiple stores from the same engine
-        let host1 = BrioHostState::new("sqlite::memory:", Box::new(MockProvider))
+        let host1 = BrioHostState::with_provider("sqlite::memory:", Box::new(MockProvider))
             .await
             .unwrap();
-        let host2 = BrioHostState::new("sqlite::memory:", Box::new(MockProvider))
+        let host2 = BrioHostState::with_provider("sqlite::memory:", Box::new(MockProvider))
             .await
             .unwrap();
 

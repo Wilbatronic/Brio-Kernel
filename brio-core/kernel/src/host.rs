@@ -1,10 +1,11 @@
 use anyhow::{Result, anyhow};
 use sqlx::{SqlitePool, sqlite::SqlitePoolOptions};
 use std::collections::HashMap;
+use std::sync::Arc;
 use tokio::sync::mpsc::Sender;
 use tokio::sync::oneshot;
 
-use crate::inference::LLMProvider;
+use crate::inference::{LLMProvider, ProviderRegistry};
 use crate::mesh::{MeshMessage, Payload};
 use crate::store::{PrefixPolicy, SqlStore};
 use crate::vfs::manager::SessionManager;
@@ -15,11 +16,12 @@ pub struct BrioHostState {
     db_pool: SqlitePool,
     broadcaster: Broadcaster,
     session_manager: std::sync::Mutex<SessionManager>,
-    inference_provider: std::sync::Arc<Box<dyn LLMProvider>>,
+    provider_registry: Arc<ProviderRegistry>,
 }
 
 impl BrioHostState {
-    pub async fn new(db_url: &str, provider: Box<dyn LLMProvider>) -> Result<Self> {
+    /// Creates a new BrioHostState with a pre-configured provider registry.
+    pub async fn new(db_url: &str, registry: ProviderRegistry) -> Result<Self> {
         let pool = SqlitePoolOptions::new().connect(db_url).await?;
 
         Ok(Self {
@@ -27,8 +29,16 @@ impl BrioHostState {
             db_pool: pool,
             broadcaster: Broadcaster::new(),
             session_manager: std::sync::Mutex::new(SessionManager::new()),
-            inference_provider: std::sync::Arc::new(provider),
+            provider_registry: Arc::new(registry),
         })
+    }
+
+    /// Creates a new BrioHostState with a single provider (backward compatible).
+    pub async fn with_provider(db_url: &str, provider: Box<dyn LLMProvider>) -> Result<Self> {
+        let registry = ProviderRegistry::new();
+        registry.register_arc("default", Arc::from(provider));
+        registry.set_default("default");
+        Self::new(db_url, registry).await
     }
 
     pub fn register_component(&self, id: String, sender: Sender<MeshMessage>) {
@@ -91,7 +101,19 @@ impl BrioHostState {
         manager.commit_session(session_id)
     }
 
-    pub fn inference(&self) -> std::sync::Arc<Box<dyn LLMProvider>> {
-        self.inference_provider.clone()
+    /// Returns the provider registry for multi-model access.
+    pub fn registry(&self) -> Arc<ProviderRegistry> {
+        self.provider_registry.clone()
+    }
+
+    /// Returns a specific LLM provider by name.
+    pub fn inference_by_name(&self, name: &str) -> Option<Arc<dyn LLMProvider>> {
+        self.provider_registry.get(name)
+    }
+
+    /// Returns the default LLM provider (backward compatible).
+    pub fn inference(&self) -> Option<Arc<dyn LLMProvider>> {
+        self.provider_registry.get_default()
     }
 }
+

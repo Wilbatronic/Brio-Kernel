@@ -40,7 +40,7 @@ async fn main() -> anyhow::Result<()> {
     );
     let provider = brio_kernel::inference::OpenAIProvider::new(provider_config);
 
-    let state = match BrioHostState::new(db_url, Box::new(provider)).await {
+    let state = match BrioHostState::with_provider(db_url, Box::new(provider)).await {
         Ok(s) => s,
         Err(e) => {
             error!("Failed to initialize host state: {:?}", e);
